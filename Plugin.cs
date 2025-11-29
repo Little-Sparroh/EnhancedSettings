@@ -70,14 +70,14 @@ public class SparrohPlugin : BaseUnityPlugin
 
         showJackrabbitBounceIndicators = Config.Bind("Bounce Indicators", "Jackrabbit Bounce Indicator", true, "Show jackrabbit bounce indicators");
         enableAllBounceIndicators = Config.Bind("Bounce Indicators", "All Bounce Indicators", false, "Show bounce/ricochet prediction lines for all weapons with bounces >= 1.");
-        enableOrange = Config.Bind("All Bounce Indicators", "Orange", false, "Use standard orange color (highest priority, default)");
-        enableWhite = Config.Bind("All Bounce Indicators", "White", false, "Use white color");
-        enableGreen = Config.Bind("All Bounce Indicators", "Green", false, "Use green color");
-        enableBlue = Config.Bind("All Bounce Indicators", "Blue", false, "Use blue color");
-        enableRed = Config.Bind("All Bounce Indicators", "Red", false, "Use red color");
-        enableYellow = Config.Bind("All Bounce Indicators", "Yellow", false, "Use yellow color");
-        enablePurple = Config.Bind("All Bounce Indicators", "Purple", false, "Use purple color");
-        enableCyan = Config.Bind("All Bounce Indicators", "Cyan", false, "Use cyan color");
+        enableOrange = Config.Bind("Bounce Indicators", "Orange", false, "Use standard orange color (highest priority, default)");
+        enableWhite = Config.Bind("Bounce Indicators", "White", false, "Use white color");
+        enableGreen = Config.Bind("Bounce Indicators", "Green", false, "Use green color");
+        enableBlue = Config.Bind("Bounce Indicators", "Blue", false, "Use blue color");
+        enableRed = Config.Bind("Bounce Indicators", "Red", false, "Use red color");
+        enableYellow = Config.Bind("Bounce Indicators", "Yellow", false, "Use yellow color");
+        enablePurple = Config.Bind("Bounce Indicators", "Purple", false, "Use purple color");
+        enableCyan = Config.Bind("Bounce Indicators", "Cyan", false, "Use cyan color");
         enableSingleplayerPause = Config.Bind("General", "Singleplayer Pause", false, "Enable singleplayer pause functionality");
         skipIntro = Config.Bind("General", "Skip Intro", false, "Skip the intro sequence on startup");
 
