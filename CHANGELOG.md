@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.1.0 (2025-11-29)
+
+* Added multiple new client-side gameplay enhancements:
+  * Skip Intro: Skips the startup intro sequence for faster loading
+  * Singleplayer Pause: Pauses gameplay when opening menu in singleplayer mode to freeze AI, projectiles, and enemies
+  * Bounce Indicators: Shows prediction lines for weapon bounce trajectories (Jackrabbit-specific and universal options)
+  * Multiplayer Region Bypass: Allows setting lobby distance to "Worldwide" to bypass regional restrictions
+* Added customizable color options for bounce indicators with glow effects (Orange, White, Green, Blue, Red, Yellow, Purple, Cyan)
+* Renamed source code files to PascalCase convention for consistency
+* All features are independently configurable via BepInEx config file
+* Client-side only, no multiplayer impact
+* Uses HarmonyLib for safe patching
+
 ## 1.0.0 (2025-08-19)
 
 * Initial release combining multiple client-side gameplay enhancements:

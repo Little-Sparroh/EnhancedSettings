@@ -3,9 +3,7 @@ using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
 using Pigeon.Movement;
-using Pigeon.Math;
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using UnityEngine;
@@ -17,14 +15,27 @@ public class SparrohPlugin : BaseUnityPlugin
 {
     public const string PluginGUID = "sparroh.enhancedsettings";
     public const string PluginName = "EnhancedSettings";
-    public const string PluginVersion = "1.0.0";
+    public const string PluginVersion = "1.1.0";
 
     internal static new ManualLogSource Logger;
 
-    internal static ConfigEntry<bool> disableFOVChange;
-    internal static ConfigEntry<bool> disableSprintFOV;
-    internal static ConfigEntry<bool> enableToggleAim;
-    internal static ConfigEntry<bool> enableToggleCrouch;
+    internal static ConfigEntry<bool> aimFOVChange;
+    internal static ConfigEntry<bool> sprintFOVChange;
+    internal static ConfigEntry<bool> toggleAim;
+    internal static ConfigEntry<bool> toggleCrouch;
+
+    internal static ConfigEntry<bool> showJackrabbitBounceIndicators;
+    internal static ConfigEntry<bool> enableAllBounceIndicators;
+    internal static ConfigEntry<bool> enableOrange;
+    internal static ConfigEntry<bool> enableWhite;
+    internal static ConfigEntry<bool> enableGreen;
+    internal static ConfigEntry<bool> enableBlue;
+    internal static ConfigEntry<bool> enableRed;
+    internal static ConfigEntry<bool> enableYellow;
+    internal static ConfigEntry<bool> enablePurple;
+    internal static ConfigEntry<bool> enableCyan;
+    internal static ConfigEntry<bool> enableSingleplayerPause;
+    internal static ConfigEntry<bool> skipIntro;
 
     private FileSystemWatcher disableAimFOVWatcher;
     private FileSystemWatcher disableSprintFOVWatcher;
@@ -52,15 +63,39 @@ public class SparrohPlugin : BaseUnityPlugin
     {
         Logger = base.Logger;
 
-        disableFOVChange = Config.Bind("General", "DisableAimFOV", true, "If true, disables FOV zoom changes when aiming.");
-        disableSprintFOV = Config.Bind("General", "DisableSprintFOV", true, "If true, disables FOV changes while sprinting.");
-        enableToggleAim = Config.Bind("General", "EnableToggleAim", true, "If true, aim becomes a toggle (press to enter/exit) instead of hold.");
-        enableToggleCrouch = Config.Bind("General", "EnableToggleCrouch", true, "If true, enables toggle crouch functionality (hold crouch by pressing slide button).");
+        aimFOVChange = Config.Bind("General", "Aim FOV Change", true, "If true, enables FOV zoom changes when aiming.");
+        sprintFOVChange = Config.Bind("General", "Sprint FOV Change", true, "If true, enables FOV changes while sprinting.");
+        toggleAim = Config.Bind("General", "Toggle Aim", false, "If true, aim becomes a toggle (press to enter/exit) instead of hold.");
+        toggleCrouch = Config.Bind("General", "Toggle Crouch", false, "If true, enables toggle crouch functionality (hold crouch by pressing slide button).");
 
-        disableFOVChange.SettingChanged += OnDisableFOVChanged;
-        disableSprintFOV.SettingChanged += OnDisableSprintFOVChanged;
-        enableToggleAim.SettingChanged += OnEnableToggleAimChanged;
-        enableToggleCrouch.SettingChanged += OnEnableToggleCrouchChanged;
+        showJackrabbitBounceIndicators = Config.Bind("Bounce Indicators", "Jackrabbit Bounce Indicator", true, "Show jackrabbit bounce indicators");
+        enableAllBounceIndicators = Config.Bind("Bounce Indicators", "All Bounce Indicators", false, "Show bounce/ricochet prediction lines for all weapons with bounces >= 1.");
+        enableOrange = Config.Bind("All Bounce Indicators", "Orange", false, "Use standard orange color (highest priority, default)");
+        enableWhite = Config.Bind("All Bounce Indicators", "White", false, "Use white color");
+        enableGreen = Config.Bind("All Bounce Indicators", "Green", false, "Use green color");
+        enableBlue = Config.Bind("All Bounce Indicators", "Blue", false, "Use blue color");
+        enableRed = Config.Bind("All Bounce Indicators", "Red", false, "Use red color");
+        enableYellow = Config.Bind("All Bounce Indicators", "Yellow", false, "Use yellow color");
+        enablePurple = Config.Bind("All Bounce Indicators", "Purple", false, "Use purple color");
+        enableCyan = Config.Bind("All Bounce Indicators", "Cyan", false, "Use cyan color");
+        enableSingleplayerPause = Config.Bind("General", "Singleplayer Pause", false, "Enable singleplayer pause functionality");
+        skipIntro = Config.Bind("General", "Skip Intro", false, "Skip the intro sequence on startup");
+
+        aimFOVChange.SettingChanged += OnAimFOVChanged;
+        enableAllBounceIndicators.SettingChanged += OnEnableAllBounceIndicatorsChanged;
+        enableSingleplayerPause.SettingChanged += OnEnableSingleplayerPauseChanged;
+        sprintFOVChange.SettingChanged += OnSprintFOVChanged;
+        toggleAim.SettingChanged += OnToggleAimChanged;
+        toggleCrouch.SettingChanged += OnToggleCrouchChanged;
+
+        enableOrange.SettingChanged += OnColorConfigChanged;
+        enableWhite.SettingChanged += OnColorConfigChanged;
+        enableGreen.SettingChanged += OnColorConfigChanged;
+        enableBlue.SettingChanged += OnColorConfigChanged;
+        enableRed.SettingChanged += OnColorConfigChanged;
+        enableYellow.SettingChanged += OnColorConfigChanged;
+        enablePurple.SettingChanged += OnColorConfigChanged;
+        enableCyan.SettingChanged += OnColorConfigChanged;
 
         SetupFileWatchers();
 
@@ -73,6 +108,12 @@ public class SparrohPlugin : BaseUnityPlugin
         ApplyToggleAimPatches(harmony);
         ApplyToggleCrouchPatches(harmony);
 
+        ApplyDisableBounceIndicatorPatches(harmony);
+        ApplyRegionBypassPatches(harmony);
+        ApplyAllBounceIndicatorsPatches(harmony);
+        ApplySingleplayerPausePatches();
+        ApplySkipIntroPatches(harmony);
+
         Logger.LogInfo($"{PluginName} loaded successfully.");
     }
 
@@ -81,7 +122,7 @@ public class SparrohPlugin : BaseUnityPlugin
         var configPath = Paths.ConfigPath;
 
         disableAimFOVWatcher = new FileSystemWatcher(configPath, $"{PluginGUID}.cfg");
-        disableAimFOVWatcher.Changed += (s, e) => { Logger.LogInfo("Config file changed, reloading"); disableFOVChange.ConfigFile.Reload(); };
+        disableAimFOVWatcher.Changed += (s, e) => { aimFOVChange.ConfigFile.Reload(); };
         disableAimFOVWatcher.EnableRaisingEvents = true;
 
         disableSprintFOVWatcher = disableAimFOVWatcher;
@@ -109,76 +150,122 @@ public class SparrohPlugin : BaseUnityPlugin
 
     private void ApplyAimFOVPatches(Harmony harmony)
     {
-        var updateAimingMethod = AccessTools.Method(typeof(PlayerLook), "UpdateAiming");
-        if (updateAimingMethod != null)
-        {
-            harmony.Patch(updateAimingMethod, prefix: new HarmonyMethod(typeof(AimFOVPatches), nameof(AimFOVPatches.UpdateAimingPrefix)));
-        }
-
-        var updateCameraFOVMethod = AccessTools.Method(typeof(PlayerLook), "UpdateCameraFOV");
-        if (updateCameraFOVMethod != null)
-        {
-            harmony.Patch(updateCameraFOVMethod, postfix: new HarmonyMethod(typeof(AimFOVPatches), nameof(AimFOVPatches.UpdateCameraFOVPostfix)));
-        }
+        harmony.PatchAll(typeof(AimFOVPatches));
     }
 
     private void ApplySprintFOVPatches(Harmony harmony)
     {
-        if (disableSprintFOV.Value)
-        {
-            harmony.PatchAll(typeof(SprintFOVPatches));
-        }
+        harmony.PatchAll(typeof(SprintFOVPatches));
     }
 
     private void ApplyToggleAimPatches(Harmony harmony)
     {
-        var playerInputInit = AccessTools.Method(typeof(PlayerInput), "Initialize");
-        harmony.Patch(playerInputInit, postfix: new HarmonyMethod(typeof(ToggleAimPatches), nameof(ToggleAimPatches.PlayerInputInitializePostfix)));
-
-        var onAimPerformedMethod = AccessTools.Method(typeof(Gun), "OnAimInputPerformed");
-        harmony.Patch(onAimPerformedMethod, prefix: new HarmonyMethod(typeof(ToggleAimPatches), nameof(ToggleAimPatches.SkipPrefix)));
-
-        var onAimCancelledMethod = AccessTools.Method(typeof(Gun), "OnAimInputCancelled");
-        harmony.Patch(onAimCancelledMethod, prefix: new HarmonyMethod(typeof(ToggleAimPatches), nameof(ToggleAimPatches.SkipPrefix)));
-
-        var handleAimMethod = AccessTools.Method(typeof(Gun), "HandleAim");
-        harmony.Patch(handleAimMethod, prefix: new HarmonyMethod(typeof(ToggleAimPatches), nameof(ToggleAimPatches.HandleAimPrefix)));
-
-        var updateMethod = AccessTools.Method(typeof(Gun), "Update");
-        harmony.Patch(updateMethod, postfix: new HarmonyMethod(typeof(ToggleAimPatches), nameof(ToggleAimPatches.UpdatePostfix)));
-
-        var resurrectMethod = AccessTools.Method(typeof(Player), "Resurrect_ClientRpc");
-        harmony.Patch(resurrectMethod, postfix: new HarmonyMethod(typeof(ToggleAimPatches), nameof(ToggleAimPatches.ResetTogglePostfix)));
+        harmony.PatchAll(typeof(ToggleAimPatches));
     }
 
     private void ApplyToggleCrouchPatches(Harmony harmony)
     {
-        harmony.PatchAll();
+        harmony.PatchAll(typeof(ToggleCrouchPatches));
+        harmony.PatchAll(typeof(EndCrouchPatches));
+        harmony.PatchAll(typeof(EndSlidePatches));
     }
 
-    private void OnDisableFOVChanged(object sender, EventArgs e)
+    private void ApplyDisableBounceIndicatorPatches(Harmony harmony)
     {
-        Logger.LogInfo($"DisableFOVChange changed to {disableFOVChange.Value}");
+        harmony.PatchAll(typeof(BounceShotgunPatches));
     }
 
-    private void OnDisableSprintFOVChanged(object sender, EventArgs e)
+    private void ApplyRegionBypassPatches(Harmony harmony)
     {
-        Logger.LogInfo($"DisableSprintFOV changed to {disableSprintFOV.Value}");
+        harmony.PatchAll(typeof(RegionBypassPatches));
     }
 
-    private void OnEnableToggleAimChanged(object sender, EventArgs e)
+    private void ApplyAllBounceIndicatorsPatches(Harmony harmony)
     {
-        Logger.LogInfo($"EnableToggleAim changed to {enableToggleAim.Value}");
+        harmony.PatchAll(typeof(GunBouncePatches));
+    }
+
+    private void ApplySingleplayerPausePatches()
+    {
+        gameObject.AddComponent<SingleplayerPause>();
+    }
+
+    private void ApplySkipIntroPatches(Harmony harmony)
+    {
+        harmony.PatchAll(typeof(MycopunkSkipIntro.IntroSkip.IntroPatches));
+    }
+
+    private void OnAimFOVChanged(object sender, EventArgs e)
+    {
+    }
+
+    private void OnSprintFOVChanged(object sender, EventArgs e)
+    {
+    }
+
+    private void OnToggleAimChanged(object sender, EventArgs e)
+    {
         ConfigureAimSubscription();
     }
 
-    private void OnEnableToggleCrouchChanged(object sender, EventArgs e)
+    private void OnToggleCrouchChanged(object sender, EventArgs e)
     {
-        Logger.LogInfo($"EnableToggleCrouch changed to {enableToggleCrouch.Value}");
-        if (!enableToggleCrouch.Value)
+        if (!toggleCrouch.Value)
         {
             ToggleCrouchPatches.isToggleOn = false;
         }
+    }
+
+    private void OnEnableAllBounceIndicatorsChanged(object sender, EventArgs e)
+    {
+    }
+
+    private void OnEnableSingleplayerPauseChanged(object sender, EventArgs e)
+    {
+    }
+
+    private void OnColorConfigChanged(object sender, EventArgs e)
+    {
+        UpdateBounceIndicatorColors();
+    }
+
+    private Color GetSelectedColor()
+    {
+        if (enableOrange.Value) return new Color(1f, 0.5f, 0f);
+        if (enableWhite.Value) return new Color(1f, 1f, 1f);
+        if (enableGreen.Value) return new Color(0f, 1f, 0f);
+        if (enableBlue.Value) return new Color(0f, 0f, 1f);
+        if (enableRed.Value) return new Color(1f, 0f, 0f);
+        if (enableYellow.Value) return new Color(1f, 1f, 0f);
+        if (enablePurple.Value) return new Color(1f, 0f, 1f);
+        if (enableCyan.Value) return new Color(0f, 1f, 1f);
+        return new Color(1f, 0.5f, 0f);
+    }
+
+    private void UpdateBounceIndicatorColors()
+    {
+        Color newColor = GetSelectedColor();
+        if (AllBounceIndicators.BounceLines != null)
+        {
+            foreach (var kvp in AllBounceIndicators.BounceLines)
+            {
+                var bounceLines = kvp.Value;
+                for (int i = 0; i < bounceLines.Count; i++)
+                {
+                    if (bounceLines[i] != null && bounceLines[i].material != null)
+                    {
+                        bounceLines[i].material.color = newColor;
+                        Color emissionColor = newColor * 0.5f;
+                        emissionColor.a = 1f;
+                        bounceLines[i].material.SetColor("_EmissionColor", emissionColor);
+                        bounceLines[i].startColor = newColor;
+                        bounceLines[i].endColor = newColor;
+                    }
+                }
+            }
+        }
+        // Invalidate cached prefab so newly equipped weapons get the updated color
+        AllBounceIndicators.BounceLinePrefab = null;
     }
 
     internal static void ConfigureAimSubscription()
@@ -186,7 +273,7 @@ public class SparrohPlugin : BaseUnityPlugin
         if (aimAction != null)
         {
             aimAction.started -= OnAimStarted;
-            if (enableToggleAim.Value)
+            if (toggleAim.Value)
             {
                 aimAction.started += OnAimStarted;
             }
@@ -199,7 +286,7 @@ public class SparrohPlugin : BaseUnityPlugin
 
     internal static void OnAimStarted(InputAction.CallbackContext context)
     {
-        if (enableToggleAim.Value)
+        if (toggleAim.Value)
         {
             isAimToggled = !isAimToggled;
         }
@@ -215,163 +302,6 @@ public class SparrohPlugin : BaseUnityPlugin
         if (aimAction != null)
         {
             aimAction.started -= OnAimStarted;
-        }
-    }
-}
-
-internal class AimFOVPatches
-{
-    public static bool UpdateAimingPrefix(PlayerLook __instance)
-    {
-        if (SparrohPlugin.disableFOVChange.Value && SparrohPlugin.isAimingPLField != null && SparrohPlugin.aimStateChangeTimeField != null && SparrohPlugin.aimDurationPLField != null && SparrohPlugin.aimFOVPLField != null && SparrohPlugin.defaultFOVGetter != null && SparrohPlugin.fovField != null)
-        {
-            bool isAiming = (bool)SparrohPlugin.isAimingPLField.GetValue(__instance);
-            if (isAiming)
-            {
-                float aimStateChangeTime = (float)SparrohPlugin.aimStateChangeTimeField.GetValue(__instance);
-                aimStateChangeTime = Mathf.Min(aimStateChangeTime + Time.deltaTime / (float)SparrohPlugin.aimDurationPLField.GetValue(__instance), 1f);
-                SparrohPlugin.aimStateChangeTimeField.SetValue(__instance, aimStateChangeTime);
-                float defaultFOV = (float)SparrohPlugin.defaultFOVGetter.Invoke(__instance, null);
-                SparrohPlugin.aimFOVPLField.SetValue(__instance, defaultFOV);
-                SparrohPlugin.fovField.SetValue(__instance, Mathf.LerpUnclamped(defaultFOV, defaultFOV, EaseFunctions.EaseInOutCubic(aimStateChangeTime)));
-            }
-            else if ((float)SparrohPlugin.aimStateChangeTimeField.GetValue(__instance) > 0f)
-            {
-                float aimStateChangeTime = (float)SparrohPlugin.aimStateChangeTimeField.GetValue(__instance);
-                aimStateChangeTime = Mathf.Max(aimStateChangeTime - Time.deltaTime / (float)SparrohPlugin.aimDurationPLField.GetValue(__instance), 0f);
-                SparrohPlugin.aimStateChangeTimeField.SetValue(__instance, aimStateChangeTime);
-                float defaultFOV = (float)SparrohPlugin.defaultFOVGetter.Invoke(__instance, null);
-                SparrohPlugin.aimFOVPLField.SetValue(__instance, defaultFOV);
-                SparrohPlugin.fovField.SetValue(__instance, Mathf.LerpUnclamped(defaultFOV, defaultFOV, EaseFunctions.EaseInOutCubic(aimStateChangeTime)));
-            }
-            return false;
-        }
-        return true;
-    }
-
-    public static void UpdateCameraFOVPostfix(PlayerLook __instance)
-    {
-        if (SparrohPlugin.disableFOVChange.Value && SparrohPlugin.isAimingPLField != null && SparrohPlugin.fovField != null && SparrohPlugin.defaultFOVGetter != null)
-        {
-            object isAimingObj = SparrohPlugin.isAimingPLField.GetValue(__instance);
-            if (isAimingObj is bool isAiming && isAiming)
-            {
-                SparrohPlugin.fovField.SetValue(__instance, SparrohPlugin.defaultFOVGetter.Invoke(__instance, null));
-            }
-        }
-    }
-}
-
-[HarmonyPatch(typeof(PlayerLook), "AddFOV")]
-internal class SprintFOVPatches
-{
-    public static bool Prefix(ref float value)
-    {
-        if (SparrohPlugin.disableSprintFOV != null && !SparrohPlugin.disableSprintFOV.Value)
-            return true;
-
-        StackTrace stackTrace = new StackTrace();
-
-        foreach (var frame in stackTrace.GetFrames())
-        {
-            var method = frame.GetMethod();
-            if (method?.ReflectedType?.Name == "Player" && method.Name.Contains("Update"))
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-}
-
-internal class ToggleAimPatches
-{
-    public static void PlayerInputInitializePostfix()
-    {
-        SparrohPlugin.aimAction = PlayerInput.Controls?.Player.Aim;
-        SparrohPlugin.ConfigureAimSubscription();
-    }
-
-    public static bool SkipPrefix()
-    {
-        return !SparrohPlugin.enableToggleAim.Value;
-    }
-
-    public static void HandleAimPrefix(Gun __instance)
-    {
-        if (SparrohPlugin.enableToggleAim.Value)
-        {
-            bool prevHeld = (bool)SparrohPlugin.isAimInputHeldField.GetValue(__instance);
-            SparrohPlugin.isAimInputHeldField.SetValue(__instance, SparrohPlugin.isAimToggled);
-            if (SparrohPlugin.isAimToggled)
-            {
-                SparrohPlugin.lastPressedAimTimeField.SetValue(__instance, Time.time);
-            }
-        }
-    }
-
-    public static void UpdatePostfix(Gun __instance)
-    {
-        if (SparrohPlugin.enableToggleAim.Value)
-        {
-            bool isAiming = (bool)SparrohPlugin.isAimingGetter.Invoke(__instance, null);
-            bool wantsToFire = (bool)SparrohPlugin.wantsToFireGetter.Invoke(__instance, null);
-            float lastFireTime = (float)SparrohPlugin.lastFireTimeGetter.Invoke(__instance, null);
-            float lastPressedFireTime = (float)SparrohPlugin.lastPressedFireTimeField.GetValue(__instance);
-            Player player = (Player)SparrohPlugin.playerField.GetValue(__instance);
-            if (player != null && !isAiming && !wantsToFire && Time.time - Mathf.Max(lastFireTime, lastPressedFireTime) > 0.5f)
-            {
-                player.ResumeSprint();
-            }
-        }
-    }
-
-    public static void ResetTogglePostfix()
-    {
-        SparrohPlugin.isAimToggled = false;
-    }
-}
-
-[HarmonyPatch(typeof(Player), "EndCrouch")]
-internal class EndCrouchPatch
-{
-    static bool Prefix()
-    {
-        return !(SparrohPlugin.enableToggleCrouch.Value && ToggleCrouchPatches.isToggleOn);
-    }
-}
-
-[HarmonyPatch(typeof(Player), "EndSlide")]
-internal class EndSlidePatch
-{
-    static bool Prefix()
-    {
-        return !(SparrohPlugin.enableToggleCrouch.Value && ToggleCrouchPatches.isToggleOn);
-    }
-}
-
-[HarmonyPatch(typeof(Player), "Update")]
-internal class ToggleCrouchPatches
-{
-    internal static bool isToggleOn = false;
-
-    static void Prefix(Player __instance)
-    {
-        if (SparrohPlugin.enableToggleCrouch.Value && PlayerInput.Controls.Player.Slide.WasPressedThisFrame())
-        {
-            var crouchingProp = typeof(Player).GetProperty("Crouching");
-            var slidingProp = typeof(Player).GetProperty("Sliding");
-            bool isCrouching = (bool)crouchingProp.GetValue(__instance);
-            bool isSliding = (bool)slidingProp.GetValue(__instance);
-
-            if (isCrouching || isSliding || isToggleOn)
-            {
-                isToggleOn = false;
-            }
-            else
-            {
-                isToggleOn = true;
-            }
         }
     }
 }

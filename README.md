@@ -26,6 +26,29 @@ A BepInEx mod for MycoPunk that combines multiple gameplay enhancement features 
 - Press slide again to release
 - Configurable via `EnableToggleCrouch` setting
 
+### Skip Intro
+- Skips the intro sequence when launching the game
+- Reduces loading time and goes directly to menu
+- Configurable via `SkipIntro` setting
+
+### Singleplayer Pause
+- Pauses gameplay in singleplayer when opening the menu
+- Freezes AI, projectiles, enemies, and spawning
+- Useful for checking settings without losing progress
+- Configurable via `SingleplayerPause` setting
+
+### Bounce Indicators
+- Shows prediction lines for weapon bounce trajectories
+- Available for Jackrabbit specifically or all bouncing weapons
+- Customizable color selection with glow effects
+- Configurable via `JackrabbitBounceIndicator` and `AllBounceIndicators` settings
+- Color options: Orange, White, Green, Blue, Red, Yellow, Purple, Cyan
+
+### Multiplayer Region Bypass
+- Allows setting lobby distance to "Worldwide"
+- Bypasses regional restrictions for joining lobbies
+- No setting required (always enabled)
+
 ## Installation
 
 ### Prerequisites
@@ -50,15 +73,37 @@ The mod creates a config file at `MycoPunk/BepInEx/config/sparroh.enhancedsettin
 
 ```
 [General]
+# FOV and Aim settings
 DisableAimFOV = true      # Disable FOV zoom when aiming
 DisableSprintFOV = true   # Disable FOV changes while sprinting
 EnableToggleAim = true    # Enable toggle aim mode
 EnableToggleCrouch = true # Enable toggle crouch mode
+
+# General enhancements
+SkipIntro = true          # Skip the intro sequence on startup
+SingleplayerPause = true  # Enable singleplayer pause functionality
+
+[Bounce Indicators]
+# Enable/disable bounce indicators
+JackrabbitBounceIndicator = true # Show jackrabbit bounce indicators
+AllBounceIndicators = true       # Show bounce indicators for all weapons
+
+[All Bounce Indicators]
+# Color selection for bounce indicators (priority ordered, highest checked first)
+Orange = true   # Standard orange color (highest priority, default)
+White = false
+Green = false
+Blue = false
+Red = false
+Yellow = false
+Purple = false
+Cyan = false
 ```
 
 - Settings can be changed in-game and take effect immediately
 - Config changes are automatically reloaded without restarting
 - Set any feature to `false` to disable it
+- For bounce indicator colors, multiple can be enabled, but the highest priority color will be used
 
 ## Building from Source
 
@@ -86,6 +131,15 @@ dotnet build --configuration Release
 - **Game crashes?** Try disabling all features and re-enable one by one
 
 ## Changes
+
+### Version 1.1.0
+- Added Skip Intro feature to skip startup sequence
+- Added Singleplayer Pause functionality when opening menu
+- Added Bounce Indicators for Jackrabbit and all bouncing weapons
+- Added Multiplayer Region Bypass for unlimited lobby distance
+- Renamed source files to PascalCase convention for consistency
+- All features are configurable and can be enabled/disabled independently
+- Added customizable colors for bounce indicators with glow effects
 
 ### Version 1.0.0
 - Initial release combining DisableAimFOV, DisableSprintFOV, ToggleAim, and ToggleCrouch

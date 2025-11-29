@@ -4,7 +4,7 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "Sparroh"
 name = "EnhancedSettings"
-description = "A comprehensive mod for MycoPunk that enhances gameplay with four independent features: Disable FOV changes when aiming or sprinting for stable vision, Toggle Aim mode for hands-free aiming with auto-sprint resume, and Toggle Crouch for easy slide control. Fully configurable and client-side only."
+description = "A mod that enhances gameplay with four independent features: Disable FOV changes when aiming or sprinting for stable vision, Toggle Aim mode for hands-free aiming with auto-sprint resume, and Toggle Crouch for easy slide control. Fully configurable."
 websiteUrl = "https://github.com/Little-Sparroh/EnhancedSettings"
 containsNsfwContent = false
 
