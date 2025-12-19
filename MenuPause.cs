@@ -10,7 +10,6 @@ public class SingleplayerPause : MonoBehaviour
     private static bool menuWasOpen = false;
     private static bool isPaused = false;
 
-    // Paused components and flags
     private static readonly List<AI> pausedAI = new List<AI>();
     private static readonly Dictionary<AI, bool> aiOriginalEnabled = new Dictionary<AI, bool>();
     private static readonly Dictionary<NavMeshAgent, bool> navAgentOriginalEnabled = new Dictionary<NavMeshAgent, bool>();
@@ -69,7 +68,6 @@ public class SingleplayerPause : MonoBehaviour
     {
         if (Menu.Instance == null || !SparrohPlugin.enableSingleplayerPause.Value) return;
 
-        // Ensure menu cursor state during pause
         if (isPaused)
         {
             Cursor.lockState = CursorLockMode.None;
@@ -84,7 +82,6 @@ public class SingleplayerPause : MonoBehaviour
             isPausedMod = true;
             IsPaused = true;
 
-            // Collect all AI components in the scene
             AI[] ais = FindObjectsOfType<AI>(true);
 
             foreach (AI ai in ais)
@@ -110,7 +107,6 @@ public class SingleplayerPause : MonoBehaviour
                 }
             }
 
-            // Collect all projectiles
             SimpleProjectileBullet[] projectiles = FindObjectsOfType<SimpleProjectileBullet>(true);
             foreach (SimpleProjectileBullet proj in projectiles)
             {
@@ -122,7 +118,6 @@ public class SingleplayerPause : MonoBehaviour
                 }
             }
 
-            // Collect all enemy cores
             EnemyCore[] cores = FindObjectsOfType<EnemyCore>(true);
             foreach (EnemyCore core in cores)
             {
@@ -139,7 +134,6 @@ public class SingleplayerPause : MonoBehaviour
                 }
             }
 
-            // Collect all enemy brains
             EnemyBrain[] brains = FindObjectsOfType<EnemyBrain>(true);
             foreach (EnemyBrain brain in brains)
             {
@@ -147,18 +141,16 @@ public class SingleplayerPause : MonoBehaviour
                 {
                     pausedEnemyBrains.Add(brain);
                     enemyBrainOriginalEnabled[brain] = brain.enabled;
-                    // Store overclock status and temporarily disable to prevent explosions
                     if (brain.Overclocked > 0)
                     {
                         deactivatedOverclockedBrains.Add(brain);
                     }
-                    brain.Overclocked = 0; // Temporarily defuse
+                    brain.Overclocked = 0;
                     brain.enabled = false;
                     brain.StopAllCoroutines();
                 }
             }
 
-            // Collect enemy weapon arms
             var weaponArmTypes = new[] { typeof(GunArmTip), typeof(AutocannonArmTip), typeof(BladeArmTip) };
             foreach (var weaponType in weaponArmTypes)
             {
@@ -174,7 +166,6 @@ public class SingleplayerPause : MonoBehaviour
                 }
             }
 
-            // Collect hornets projectiles
             Hornet[] hornets = FindObjectsOfType<Hornet>(true);
             foreach (Hornet hornet in hornets)
             {
@@ -186,7 +177,6 @@ public class SingleplayerPause : MonoBehaviour
                 }
             }
 
-            // Collect explosive enemy parts with active fuses
             ExplosiveEnemyPart[] explosives = FindObjectsOfType<ExplosiveEnemyPart>(true);
             FieldInfo startFuseTimeField = typeof(ExplosiveEnemyPart).GetField("startFuseTime", BindingFlags.NonPublic | BindingFlags.Instance);
             foreach (ExplosiveEnemyPart explosive in explosives)
@@ -202,7 +192,6 @@ public class SingleplayerPause : MonoBehaviour
                 }
             }
 
-            // Disable spawning
             if (EnemyManager.Instance != null)
             {
                 wasSpawningEnabled = true;
@@ -222,7 +211,6 @@ public class SingleplayerPause : MonoBehaviour
             isPausedMod = false;
             IsPaused = false;
 
-        // Restore AI components
         foreach (AI ai in pausedAI)
         {
             if (ai != null)
@@ -234,14 +222,12 @@ public class SingleplayerPause : MonoBehaviour
             }
         }
 
-        // Restore projectiles
         foreach (SimpleProjectileBullet proj in pausedProjectiles)
         {
             if (proj != null && projectileOriginalEnabled.TryGetValue(proj, out bool enabled))
                 proj.enabled = enabled;
         }
 
-        // Restore enemy cores (overclock explosions paused but lose timing)
         foreach (EnemyCore core in pausedEnemyCores)
         {
             if (core != null)
@@ -252,10 +238,8 @@ public class SingleplayerPause : MonoBehaviour
         }
         foreach (EnemyBrain brain in overclockedEnemies)
         {
-            // Overclocked status preserved, but explosion coroutine can't be restarted (private method)
         }
 
-        // Restore enemy brains
         foreach (EnemyBrain brain in pausedEnemyBrains)
         {
             if (brain != null)
@@ -265,14 +249,12 @@ public class SingleplayerPause : MonoBehaviour
             }
         }
 
-        // Restore weapon arms
         foreach (MonoBehaviour weapon in pausedWeaponArms)
         {
             if (weapon != null && weaponArmOriginalEnabled.TryGetValue(weapon, out bool enabled))
                 weapon.enabled = enabled;
         }
 
-        // Restore overclocked status
         foreach (EnemyBrain brain in deactivatedOverclockedBrains)
         {
             if (brain != null)
@@ -281,14 +263,12 @@ public class SingleplayerPause : MonoBehaviour
             }
         }
 
-        // Restore hornets
         foreach (Hornet hornet in pausedHornets)
         {
             if (hornet != null && hornetOriginalEnabled.TryGetValue(hornet, out bool enabled))
                 hornet.enabled = enabled;
         }
 
-        // Restore explosive fuse times
         FieldInfo startFuseTimeField = typeof(ExplosiveEnemyPart).GetField("startFuseTime", BindingFlags.NonPublic | BindingFlags.Instance);
         for (int i = 0; i < pausedExplosives.Count; i++)
         {
@@ -300,7 +280,6 @@ public class SingleplayerPause : MonoBehaviour
             }
         }
 
-        // Clear lists
         pausedAI.Clear();
         aiOriginalEnabled.Clear();
         navAgentOriginalEnabled.Clear();
@@ -319,7 +298,6 @@ public class SingleplayerPause : MonoBehaviour
         pausedExplosives.Clear();
         explosiveFuseTimes.Clear();
 
-        // Re-enable spawning
         if (wasSpawningEnabled && EnemyManager.Instance != null)
         {
             EnemyManager.Instance.EnableSpawning();

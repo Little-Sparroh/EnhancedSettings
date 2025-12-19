@@ -32,8 +32,10 @@ A BepInEx mod for MycoPunk that combines multiple gameplay enhancement features 
 - Configurable via `SkipIntro` setting
 
 ### Singleplayer Pause
-- Pauses gameplay in singleplayer when opening the menu
-- Freezes AI, projectiles, enemies, and spawning
+- Comprehensively pauses gameplay in singleplayer when opening the menu
+- Freezes AI navigation and behaviors, projectiles, enemy cores and brains (including overclocked enemies)
+- Pauses weapon systems (guns, autocannons, blades), hornets, and other flying enemies
+- Preserves explosive enemy part fuse timing and disables enemy spawning
 - Useful for checking settings without losing progress
 - Configurable via `SingleplayerPause` setting
 
@@ -43,6 +45,14 @@ A BepInEx mod for MycoPunk that combines multiple gameplay enhancement features 
 - Customizable color selection with glow effects
 - Configurable via `JackrabbitBounceIndicator` and `AllBounceIndicators` settings
 - Color options: Orange, White, Green, Blue, Red, Yellow, Purple, Cyan
+
+### Skip Mission Countdown
+- Skips the countdown timer before mission start
+- Configurable via `SkipMissionCountdown` setting
+
+### Resize Item Popups
+- Reduces the size of item upgrade popups and repositions them
+- Configurable via `ResizeItemPopups` setting
 
 ### Multiplayer Region Bypass
 - Allows setting lobby distance to "Worldwide"
@@ -82,6 +92,8 @@ EnableToggleCrouch = true # Enable toggle crouch mode
 # General enhancements
 SkipIntro = true          # Skip the intro sequence on startup
 SingleplayerPause = true  # Enable singleplayer pause functionality
+SkipMissionCountdown = true # Skip the mission countdown timer
+ResizeItemPopups = true    # Resize and reposition item upgrade popups
 
 [Bounce Indicators]
 # Enable/disable bounce indicators
@@ -132,6 +144,12 @@ dotnet build --configuration Release
 
 ## Changes
 
+### Version 1.2.0
+- Major overhaul of Singleplayer Pause with comprehensive pausing of AI, projectiles, enemies, weapons, spawning, and more
+- Added Skip Mission Countdown feature
+- Added Resize Item Popups feature
+- All features remain independently configurable
+
 ### Version 1.1.0
 - Added Skip Intro feature to skip startup sequence
 - Added Singleplayer Pause functionality when opening menu
@@ -147,7 +165,9 @@ dotnet build --configuration Release
 
 ## Authors
 
-* Sparroh - Merged mod functionality
+* Sparroh
+* funlennysub (original mod template)
+* [@DomPizzie](https://twitter.com/dompizzie) (README template)
 
 ## License
 

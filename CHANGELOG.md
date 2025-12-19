@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.2.0 (2025-12-18)
+
+* Major overhaul of Singleplayer Pause functionality:
+  * Now comprehensively pauses AI navigation and behaviors
+  * Freezes all projectiles, enemy cores, and brains (including overclocked enemies)
+  * Pauses weapon systems (guns, autocannons, blades)
+  * Stops hornets and other flying enemies
+  * Preserves explosive enemy part fuse timing
+  * Disables enemy spawning during pause
+* Added Skip Mission Countdown: Skips the countdown timer before mission start
+* Added Resize Item Popups: Reduces the size of item upgrade popups and repositions them
+* All features remain independently configurable via BepInEx config file
+
 ## 1.1.0 (2025-11-29)
 
 * Added multiple new client-side gameplay enhancements:

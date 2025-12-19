@@ -15,7 +15,7 @@ public class SparrohPlugin : BaseUnityPlugin
 {
     public const string PluginGUID = "sparroh.enhancedsettings";
     public const string PluginName = "EnhancedSettings";
-    public const string PluginVersion = "1.1.0";
+    public const string PluginVersion = "1.2.0";
 
     internal static new ManualLogSource Logger;
 
@@ -36,6 +36,8 @@ public class SparrohPlugin : BaseUnityPlugin
     internal static ConfigEntry<bool> enableCyan;
     internal static ConfigEntry<bool> enableSingleplayerPause;
     internal static ConfigEntry<bool> skipIntro;
+    internal static ConfigEntry<bool> skipMissionCountdown;
+    internal static ConfigEntry<bool> resizePopups;
 
     private FileSystemWatcher disableAimFOVWatcher;
     private FileSystemWatcher disableSprintFOVWatcher;
@@ -59,6 +61,8 @@ public class SparrohPlugin : BaseUnityPlugin
     internal static MethodInfo wantsToFireGetter;
     internal static MethodInfo lastFireTimeGetter;
 
+    private GameManager gameManager;
+
     private void Awake()
     {
         Logger = base.Logger;
@@ -80,6 +84,8 @@ public class SparrohPlugin : BaseUnityPlugin
         enableCyan = Config.Bind("Bounce Indicators", "Cyan", false, "Use cyan color");
         enableSingleplayerPause = Config.Bind("General", "Singleplayer Pause", false, "Enable singleplayer pause functionality");
         skipIntro = Config.Bind("General", "Skip Intro", false, "Skip the intro sequence on startup");
+        skipMissionCountdown = Config.Bind("General", "Skip Mission Countdown", false, "If true, skips the countdown timer before mission start.");
+        resizePopups = Config.Bind("General", "Resize Item Popups", false, "If true, reduces the size of item upgrade popups and repositions them.");
 
         aimFOVChange.SettingChanged += OnAimFOVChanged;
         enableAllBounceIndicators.SettingChanged += OnEnableAllBounceIndicatorsChanged;
@@ -87,6 +93,8 @@ public class SparrohPlugin : BaseUnityPlugin
         sprintFOVChange.SettingChanged += OnSprintFOVChanged;
         toggleAim.SettingChanged += OnToggleAimChanged;
         toggleCrouch.SettingChanged += OnToggleCrouchChanged;
+        skipMissionCountdown.SettingChanged += OnSkipMissionCountdownChanged;
+        resizePopups.SettingChanged += OnResizePopupsChanged;
 
         enableOrange.SettingChanged += OnColorConfigChanged;
         enableWhite.SettingChanged += OnColorConfigChanged;
@@ -113,6 +121,7 @@ public class SparrohPlugin : BaseUnityPlugin
         ApplyAllBounceIndicatorsPatches(harmony);
         ApplySingleplayerPausePatches();
         ApplySkipIntroPatches(harmony);
+        ApplyCountdownSkipPatches(harmony);
 
         Logger.LogInfo($"{PluginName} loaded successfully.");
     }
@@ -195,6 +204,11 @@ public class SparrohPlugin : BaseUnityPlugin
         harmony.PatchAll(typeof(MycopunkSkipIntro.IntroSkip.IntroPatches));
     }
 
+    private void ApplyCountdownSkipPatches(Harmony harmony)
+    {
+        harmony.PatchAll(typeof(DisableCountdown));
+    }
+
     private void OnAimFOVChanged(object sender, EventArgs e)
     {
     }
@@ -221,6 +235,14 @@ public class SparrohPlugin : BaseUnityPlugin
     }
 
     private void OnEnableSingleplayerPauseChanged(object sender, EventArgs e)
+    {
+    }
+
+    private void OnSkipMissionCountdownChanged(object sender, EventArgs e)
+    {
+    }
+
+    private void OnResizePopupsChanged(object sender, EventArgs e)
     {
     }
 
@@ -264,7 +286,6 @@ public class SparrohPlugin : BaseUnityPlugin
                 }
             }
         }
-        // Invalidate cached prefab so newly equipped weapons get the updated color
         AllBounceIndicators.BounceLinePrefab = null;
     }
 
@@ -289,6 +310,18 @@ public class SparrohPlugin : BaseUnityPlugin
         if (toggleAim.Value)
         {
             isAimToggled = !isAimToggled;
+        }
+    }
+
+    private void Update()
+    {
+        if (resizePopups.Value && gameManager == null)
+        {
+            gameManager = GameManager.Instance;
+            if (gameManager != null)
+            {
+                ResizePopup.Initialize(gameManager);
+            }
         }
     }
 

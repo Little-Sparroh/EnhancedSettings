@@ -16,18 +16,16 @@ internal static class AllBounceIndicators
 
     private static Color GetSelectedColor()
     {
-        // Priority-ordered color selection
-        if (SparrohPlugin.enableOrange.Value) return new Color(1f, 0.5f, 0f); // Orange
-        if (SparrohPlugin.enableWhite.Value) return new Color(1f, 1f, 1f); // White
-        if (SparrohPlugin.enableGreen.Value) return new Color(0f, 1f, 0f); // Green
-        if (SparrohPlugin.enableBlue.Value) return new Color(0f, 0f, 1f); // Blue
-        if (SparrohPlugin.enableRed.Value) return new Color(1f, 0f, 0f); // Red
-        if (SparrohPlugin.enableYellow.Value) return new Color(1f, 1f, 0f); // Yellow
-        if (SparrohPlugin.enablePurple.Value) return new Color(1f, 0f, 1f); // Magenta
-        if (SparrohPlugin.enableCyan.Value) return new Color(0f, 1f, 1f); // Cyan
+        if (SparrohPlugin.enableOrange.Value) return new Color(1f, 0.5f, 0f);
+        if (SparrohPlugin.enableWhite.Value) return new Color(1f, 1f, 1f);
+        if (SparrohPlugin.enableGreen.Value) return new Color(0f, 1f, 0f);
+        if (SparrohPlugin.enableBlue.Value) return new Color(0f, 0f, 1f);
+        if (SparrohPlugin.enableRed.Value) return new Color(1f, 0f, 0f);
+        if (SparrohPlugin.enableYellow.Value) return new Color(1f, 1f, 0f);
+        if (SparrohPlugin.enablePurple.Value) return new Color(1f, 0f, 1f);
+        if (SparrohPlugin.enableCyan.Value) return new Color(0f, 1f, 1f);
 
-        // Fallback to orange
-        return new Color(1f, 0.5f, 0f);
+        return new Color(1f, 0f, 0f);
     }
 
     public static LineRenderer CreateBounceLinePrefab()
@@ -35,32 +33,26 @@ internal static class AllBounceIndicators
         var lineObj = new GameObject("BounceIndicatorPrefab");
         var lineRenderer = lineObj.AddComponent<LineRenderer>();
 
-        // Get selected color using priority booleans
         Color indicatorColor = GetSelectedColor();
 
-        // Create material with configured color
         var material = new Material(Shader.Find("Sprites/Default"));
         material.color = indicatorColor;
 
-        // Set emission color based on the indicator color for glow effect
-        Color emissionColor = indicatorColor * 0.5f; // 50% intensity glow
-        emissionColor.a = 1f; // Full alpha for emission
+        Color emissionColor = indicatorColor * 0.5f;
+        emissionColor.a = 1f;
         material.SetColor("_EmissionColor", emissionColor);
 
         lineRenderer.material = material;
 
-        // Set line properties similar to typical bounce indicators
         lineRenderer.startWidth = 0.01f;
         lineRenderer.endWidth = 0.01f;
         lineRenderer.startColor = indicatorColor;
         lineRenderer.endColor = indicatorColor;
-        lineRenderer.positionCount = 2; // Start and end position
+        lineRenderer.positionCount = 2;
         lineRenderer.useWorldSpace = true;
 
-        // Set to inactive by default - will be activated when used
         lineObj.SetActive(false);
 
-        // Prevent prefab from being destroyed
         UnityEngine.Object.DontDestroyOnLoad(lineObj);
 
         return lineRenderer;
@@ -82,7 +74,6 @@ public static class GunBouncePatches
 
         try
         {
-            // Try to access as field
             var gunDataType = gun.GunData.GetType();
 
             var field = gunDataType.GetField("bounces", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
@@ -92,7 +83,6 @@ public static class GunBouncePatches
                 return (int)value;
             }
 
-            // Try as property
             var prop = gunDataType.GetProperty("bounces", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
             if (prop != null)
             {
@@ -100,7 +90,6 @@ public static class GunBouncePatches
                 return (int)value;
             }
 
-            // Try field names with different cases - prioritize maxBounces since it was found
             var possibleFields = gunDataType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
             foreach (var f in possibleFields)
             {
@@ -112,7 +101,6 @@ public static class GunBouncePatches
                 }
             }
 
-            // Otherwise, try enumerating stats like ExpandedHUD
             IWeapon weapon = (IWeapon)gun;
             UpgradeStatChanges statChanges = new UpgradeStatChanges();
             var secondaryEnum = weapon.EnumerateSecondaryStats(statChanges);
@@ -151,7 +139,6 @@ public static class GunBouncePatches
     [HarmonyPatch(typeof(Gun), "Enable")]
     public static void Enable_Postfix(Gun __instance)
     {
-        // Cache bounces value when gun is enabled to avoid calling expensive GetBounces every frame
         int bounces = GetBounces(__instance);
         AllBounceIndicators.CachedBounces[__instance] = bounces;
     }
@@ -161,7 +148,6 @@ public static class GunBouncePatches
     public static void Update_Postfix(Gun __instance)
     {
         try {
-            // Only process if owned and active (same conditions as OnActiveUpdate)
             if (!((bool)IsOwnerProperty.GetValue(__instance)) || !((bool)ActiveProperty.GetValue(__instance)))
                 return;
 
@@ -173,52 +159,45 @@ public static class GunBouncePatches
 
     private static void HandleBounceIndicators(Gun gun)
     {
-        // Use cached bounces value instead of expensive GetBounces call
         if (!AllBounceIndicators.CachedBounces.TryGetValue(gun, out int bounces))
         {
-            bounces = 0; // Fallback if not cached
+            bounces = 0;
         }
         bool configEnabled = SparrohPlugin.enableAllBounceIndicators.Value;
         string gunType = gun.GetType().Name;
 
         if (!configEnabled || bounces < 1) {
-            return; // Silent for performance - only log when processing
+            return;
         }
 
-        // Get or create bounce lines for this gun
         if (!AllBounceIndicators.BounceLines.ContainsKey(gun))
         {
             AllBounceIndicators.BounceLines[gun] = new List<LineRenderer>();
         }
         var bounceLines = AllBounceIndicators.BounceLines[gun];
 
-        // Lazy initialization: create prefab when first needed
         if (AllBounceIndicators.BounceLinePrefab == null) {
             AllBounceIndicators.BounceLinePrefab = AllBounceIndicators.CreateBounceLinePrefab();
         }
 
         int bulletsPerShot = gun.GunData.bulletsPerShot;
-        int totalSegmentsNeeded = bulletsPerShot * bounces; // Each bullet needs maxBounces segments (only bounce lines)
+        int totalSegmentsNeeded = bulletsPerShot * bounces;
 
-        // Create bounce line segments for all bullets and bounces
         while (bounceLines.Count < totalSegmentsNeeded)
         {
             var line = UnityEngine.Object.Instantiate(AllBounceIndicators.BounceLinePrefab);
             bounceLines.Add(line);
         }
 
-        // Prepare fire data
         var traverse = Traverse.Create(gun);
         traverse.Method("PrepareFireData").GetValue();
 
-        // Check if sprinting or fire locked
         var playerObj = traverse.Field("player").GetValue();
         bool isSprinting = (bool)playerObj?.GetType().GetProperty("IsSprinting")?.GetValue(playerObj);
         bool isFireLocked = (bool)playerObj?.GetType().GetProperty("IsFireLocked")?.GetValue(playerObj);
 
         if (isSprinting || isFireLocked)
         {
-            // Deactivate bounce lines
             for (int i = 0; i < bounceLines.Count; i++)
             {
                 if (bounceLines[i].gameObject.activeSelf)
@@ -229,7 +208,6 @@ public static class GunBouncePatches
         }
         else
         {
-            // Update bounce lines
             UpdateBounceLines(gun);
         }
     }
@@ -240,7 +218,6 @@ public static class GunBouncePatches
     [HarmonyPatch(typeof(Gun), "Disable")]
     public static void Disable_Postfix(Gun __instance)
     {
-        // Deactivate bounce lines when gun is disabled
         if (AllBounceIndicators.BounceLines.TryGetValue(__instance, out var bounceLines))
         {
             for (int i = 0; i < bounceLines.Count; i++)
@@ -254,7 +231,6 @@ public static class GunBouncePatches
     [HarmonyPatch(typeof(Gun), "OnDestroy")]
     public static void OnDestroy_Postfix(Gun __instance)
     {
-        // Clean up bounce lines when gun is destroyed
         if (AllBounceIndicators.BounceLines.TryGetValue(__instance, out var bounceLines))
         {
             for (int i = 0; i < bounceLines.Count; i++)
@@ -266,7 +242,6 @@ public static class GunBouncePatches
             }
             AllBounceIndicators.BounceLines.Remove(__instance);
         }
-        // Also clear cached bounces
         AllBounceIndicators.CachedBounces.Remove(__instance);
     }
 
@@ -275,27 +250,22 @@ public static class GunBouncePatches
         if (totalBullets <= 1) return baseDirection;
 
         try {
-            // Try to use weapon's actual spread data for authentic patterns
             var gunData = gun.GunData;
             var spreadData = gunData.GetType().GetField("spreadData")?.GetValue(gunData);
 
             if (spreadData != null) {
                 var spreadDataType = spreadData.GetType();
 
-                // Log all available methods for debugging
                 var allMethods = spreadDataType.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                 var methodNames = new List<string>();
                 foreach (var method in allMethods) methodNames.Add(method.Name);
 
-                // Log all fields
                 var allFields = spreadDataType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                 var fieldNames = new List<string>();
                 foreach (var field in allFields) fieldNames.Add(field.Name);
 
-                // Try various spread calculation method signatures
                 Vector3? attemptedDirection = null;
 
-                // Try GetSpread with different signatures
                 var getSpreadMethods = new List<MethodInfo>();
                 foreach (var method in allMethods) {
                     if (method.Name.Contains("Spread")) getSpreadMethods.Add(method);
@@ -305,7 +275,6 @@ public static class GunBouncePatches
                         var parameters = method.GetParameters();
                         object[] args = null;
 
-                        // Try different parameter combinations
                         if (parameters.Length == 2 && parameters[0].ParameterType == typeof(int) && parameters[1].ParameterType == typeof(int)) {
                             args = new object[] { bulletIndex, totalBullets };
                         } else if (parameters.Length == 3 && parameters[0].ParameterType == typeof(Vector3) && parameters[1].ParameterType == typeof(int) && parameters[2].ParameterType == typeof(int)) {
@@ -323,7 +292,6 @@ public static class GunBouncePatches
                     }
                 }
 
-                // Try direct property/field access for spread angle
                 var spreadAngleProp = spreadDataType.GetProperty("spreadAngle");
                 var spreadAngleField = spreadDataType.GetField("spreadAngle");
                 float spreadAngle = 0;
@@ -334,30 +302,22 @@ public static class GunBouncePatches
                     spreadAngle = (float)spreadAngleField.GetValue(spreadData);
                 }
 
-                // If we found spread angle, try to use it with spherical spread (concentric circles)
                 if (spreadAngle > 0) {
-                    // Create spherical distribution like concentric circles
-                    // Distribute bullets in a cone around base direction
-                    float maxRadius = spreadAngle * Mathf.Deg2Rad; // Convert to radians
+                    float maxRadius = spreadAngle * Mathf.Deg2Rad;
 
-                    // Calculate angular position for this bullet
-                    float theta = bulletIndex * (2 * Mathf.PI) / totalBullets; // Around circle
-                    float phi = (bulletIndex * maxRadius) / totalBullets; // From center outward
+                    float theta = bulletIndex * (2 * Mathf.PI) / totalBullets;
+                    float phi = (bulletIndex * maxRadius) / totalBullets;
 
-                    // Convert to 3D direction relative to base direction
-                    // Use spherical to cartesian conversion
-                    float r = phi; // Distance from center
-                    float y = r * Mathf.Sin(theta); // Vertical spread
-                    float x = r * Mathf.Cos(theta); // Horizontal spread
+                    float r = phi;
+                    float y = r * Mathf.Sin(theta);
+                    float x = r * Mathf.Cos(theta);
 
-                    // Apply rotation to align with firing direction
-                    Vector3 localSpread = new Vector3(x, y, 1f).normalized; // Forward with spread
+                    Vector3 localSpread = new Vector3(x, y, 1f).normalized;
                     Vector3 worldSpread = Quaternion.LookRotation(baseDirection) * localSpread;
 
                     return worldSpread;
                 }
 
-                // Try other common spread method signatures
                 var calculateSpreadMethod = spreadDataType.GetMethod("CalculateSpread", bindingAttr: BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
                 if (calculateSpreadMethod != null) {
                     var result = calculateSpreadMethod.Invoke(spreadData, new object[] { baseDirection, bulletIndex, totalBullets, gun });
@@ -371,11 +331,9 @@ public static class GunBouncePatches
             SparrohPlugin.Logger.LogInfo($"Error examining spread data: {ex.Message}");
         }
 
-        // Final fallback: spherical spread with default angle
-        float fallbackSpreadAngle = 15f; // Degrees cone
+        float fallbackSpreadAngle = 15f;
         float fallbackMaxRadius = fallbackSpreadAngle * Mathf.Deg2Rad;
 
-        // Simple conical distribution
         float fallbackTheta = bulletIndex * (2 * Mathf.PI) / totalBullets;
         float fallbackPhi = (bulletIndex + 1) * fallbackMaxRadius / totalBullets;
 
@@ -394,14 +352,12 @@ public static class GunBouncePatches
 
 
         try {
-            // Get gun data
             var traverse = Traverse.Create(gun);
             var fireData = traverse.Field("fireData").GetValue();
             var firePosition = (Vector3)fireData.GetType().GetField("firePosition").GetValue(fireData);
             var bulletRotation = (Quaternion)fireData.GetType().GetField("bulletRotation").GetValue(fireData);
             var bulletsPerShot = gun.GunData.bulletsPerShot;
 
-            // Get bounces for this weapon (should be cached)
             int maxBounces = 0;
             if (AllBounceIndicators.CachedBounces.TryGetValue(gun, out int bouncesValue))
             {
@@ -410,46 +366,38 @@ public static class GunBouncePatches
 
             int lineIndex = 0;
 
-            // Create bounce lines for each bullet
             for (int bulletIndex = 0; bulletIndex < bulletsPerShot && lineIndex < bounceLines.Count; bulletIndex++)
             {
                 Vector3 currentPosition = firePosition;
-                // Calculate spread-adjusted direction for this bullet
                 Vector3 baseDirection = bulletRotation * Vector3.forward;
                 Vector3 currentDirection = CalculateSpreadDirection(baseDirection, bulletIndex, bulletsPerShot, gun);
 
-                // Do initial raycast to find first bounce point (but don't draw initial line)
-                Vector3 lastDrawPosition = firePosition; // Start of first bounce segment
+                Vector3 lastDrawPosition = firePosition;
 
                 if (Physics.Raycast(currentPosition, currentDirection, out RaycastHit firstHit, 50f, LayerMask.GetMask("Default", "Terrain", "Environment")))
                 {
-                    // First surface found - calculate reflection and set up for bounce drawing
                     Vector3 firstHitPoint = firstHit.point;
                     currentPosition = firstHitPoint;
                     currentDirection = Vector3.Reflect(currentDirection, firstHit.normal);
 
-                    // Now draw bounce segments starting from first hit point
                     for (int bounceIndex = 0; bounceIndex < maxBounces && lineIndex < bounceLines.Count; bounceIndex++)
                     {
-                        lastDrawPosition = currentPosition; // Start of this bounce segment
+                        lastDrawPosition = currentPosition;
 
                         if (Physics.Raycast(currentPosition, currentDirection, out RaycastHit bounceHit, 50f, LayerMask.GetMask("Default", "Terrain", "Environment")))
                         {
-                            // Found next surface - draw bounce line
                             Vector3 bounceHitPoint = bounceHit.point;
                             Vector3[] segmentPositions = { lastDrawPosition, bounceHitPoint };
 
                             bounceLines[lineIndex].SetPositions(segmentPositions);
                             bounceLines[lineIndex].gameObject.SetActive(true);
 
-                            // Prepare for next bounce
                             currentPosition = bounceHitPoint;
                             currentDirection = Vector3.Reflect(currentDirection, bounceHit.normal);
                             lineIndex++;
                         }
                         else
                         {
-                            // No more surfaces - create fallback end segment
                             Vector3 endPoint = currentPosition + currentDirection * 15f;
                             Vector3[] segmentPositions = { lastDrawPosition, endPoint };
 
@@ -457,14 +405,12 @@ public static class GunBouncePatches
                             bounceLines[lineIndex].gameObject.SetActive(true);
                             lineIndex++;
 
-                            // Finished with bounces for this bullet
                             break;
                         }
                     }
                 }
             }
 
-            // Deactivate unused lines
             while (lineIndex < bounceLines.Count)
             {
                 bounceLines[lineIndex].gameObject.SetActive(false);
