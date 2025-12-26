@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.3.0 (2025-12-24)
+
+* Added Data Log Waypoints: Shows waypoint pings on the minimap for undiscovered data logs
+* Added Skin Randomizer: Randomly equips favorite skins for character and droppod at mission start
+* Fixed Singleplayer Pause: Now allows use of the mission select window while paused
+* All features remain independently configurable via BepInEx config file
+
+## 1.2.1 (2025-12-19)
+
+* Fixed Singleplayer Pause cursor behavior: Cursor now properly locks when menu is closed
+
 ## 1.2.0 (2025-12-18)
 
 * Major overhaul of Singleplayer Pause functionality:

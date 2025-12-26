@@ -1,7 +1,7 @@
-﻿using HarmonyLib;
+﻿using System;
+using HarmonyLib;
 using UnityEngine;
 using System.Reflection;
-using System;
 using System.Collections;
 
 public static class ResizePopup
@@ -49,22 +49,28 @@ public static class ResizePopup
 
         void Start()
         {
-
-            upgradePopupsField = AccessTools.Field(typeof(GameManager), "upgradePopups");
-            if (upgradePopupsField == null)
+            try
             {
-                return;
-            }
+                upgradePopupsField = AccessTools.Field(typeof(GameManager), "upgradePopups");
+                if (upgradePopupsField == null)
+                {
+                    return;
+                }
 
-            upgradePopupsList = upgradePopupsField.GetValue(GameManager.Instance) as IList;
-            if (upgradePopupsList == null)
+                upgradePopupsList = upgradePopupsField.GetValue(GameManager.Instance) as IList;
+                if (upgradePopupsList == null)
+                {
+                    return;
+                }
+
+                previousCount = upgradePopupsList.Count;
+
+                StartCoroutine(MonitorListCoroutine());
+            }
+            catch (Exception ex)
             {
-                return;
+                SparrohPlugin.Logger.LogError($"Error in PopupMonitor.Start: {ex.Message}");
             }
-
-            previousCount = upgradePopupsList.Count;
-
-            StartCoroutine(MonitorListCoroutine());
         }
 
         private IEnumerator MonitorListCoroutine()

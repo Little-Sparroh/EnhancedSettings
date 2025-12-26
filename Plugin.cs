@@ -4,10 +4,33 @@ using BepInEx.Logging;
 using HarmonyLib;
 using Pigeon.Movement;
 using System;
+using System.ComponentModel;
 using System.IO;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.InputSystem;
+
+public enum BounceIndicatorColor
+{
+    [Description("Standard orange color (highest priority, default)")]
+    Orange,
+    [Description("Clean white color")]
+    White,
+    [Description("Bright green color")]
+    Green,
+    [Description("Deep blue color")]
+    Blue,
+    [Description("Vibrant red color")]
+    Red,
+    [Description("Sunny yellow color")]
+    Yellow,
+    [Description("Royal purple color")]
+    Purple,
+    [Description("Aqua cyan color")]
+    Cyan,
+    [Description("Use a custom color specified by hex code")]
+    Custom
+}
 
 [BepInPlugin(PluginGUID, PluginName, PluginVersion)]
 [MycoMod(null, ModFlags.IsClientSide)]
@@ -15,7 +38,7 @@ public class SparrohPlugin : BaseUnityPlugin
 {
     public const string PluginGUID = "sparroh.enhancedsettings";
     public const string PluginName = "EnhancedSettings";
-    public const string PluginVersion = "1.2.0";
+    public const string PluginVersion = "1.3.0";
 
     internal static new ManualLogSource Logger;
 
@@ -26,18 +49,14 @@ public class SparrohPlugin : BaseUnityPlugin
 
     internal static ConfigEntry<bool> showJackrabbitBounceIndicators;
     internal static ConfigEntry<bool> enableAllBounceIndicators;
-    internal static ConfigEntry<bool> enableOrange;
-    internal static ConfigEntry<bool> enableWhite;
-    internal static ConfigEntry<bool> enableGreen;
-    internal static ConfigEntry<bool> enableBlue;
-    internal static ConfigEntry<bool> enableRed;
-    internal static ConfigEntry<bool> enableYellow;
-    internal static ConfigEntry<bool> enablePurple;
-    internal static ConfigEntry<bool> enableCyan;
+    internal static ConfigEntry<BounceIndicatorColor> bounceIndicatorColor;
+    internal static ConfigEntry<string> bounceIndicatorCustomColor;
     internal static ConfigEntry<bool> enableSingleplayerPause;
     internal static ConfigEntry<bool> skipIntro;
     internal static ConfigEntry<bool> skipMissionCountdown;
     internal static ConfigEntry<bool> resizePopups;
+    internal static ConfigEntry<bool> dataLogWaypoints;
+    internal static ConfigEntry<bool> skinRandomizer;
 
     private FileSystemWatcher disableAimFOVWatcher;
     private FileSystemWatcher disableSprintFOVWatcher;
@@ -62,9 +81,11 @@ public class SparrohPlugin : BaseUnityPlugin
     internal static MethodInfo lastFireTimeGetter;
 
     private GameManager gameManager;
+    internal static SparrohPlugin Instance { get; set; }
 
     private void Awake()
     {
+        Instance = this;
         Logger = base.Logger;
 
         aimFOVChange = Config.Bind("General", "Aim FOV Change", true, "If true, enables FOV zoom changes when aiming.");
@@ -74,18 +95,14 @@ public class SparrohPlugin : BaseUnityPlugin
 
         showJackrabbitBounceIndicators = Config.Bind("Bounce Indicators", "Jackrabbit Bounce Indicator", true, "Show jackrabbit bounce indicators");
         enableAllBounceIndicators = Config.Bind("Bounce Indicators", "All Bounce Indicators", false, "Show bounce/ricochet prediction lines for all weapons with bounces >= 1.");
-        enableOrange = Config.Bind("Bounce Indicators", "Orange", false, "Use standard orange color (highest priority, default)");
-        enableWhite = Config.Bind("Bounce Indicators", "White", false, "Use white color");
-        enableGreen = Config.Bind("Bounce Indicators", "Green", false, "Use green color");
-        enableBlue = Config.Bind("Bounce Indicators", "Blue", false, "Use blue color");
-        enableRed = Config.Bind("Bounce Indicators", "Red", false, "Use red color");
-        enableYellow = Config.Bind("Bounce Indicators", "Yellow", false, "Use yellow color");
-        enablePurple = Config.Bind("Bounce Indicators", "Purple", false, "Use purple color");
-        enableCyan = Config.Bind("Bounce Indicators", "Cyan", false, "Use cyan color");
+        bounceIndicatorColor = Config.Bind("Bounce Indicators", "Bounce Indicator Color", BounceIndicatorColor.Orange, "Select the color for bounce/ricochet prediction lines");
+        bounceIndicatorCustomColor = Config.Bind("Bounce Indicators", "Bounce Indicator Custom Color", "#FF8000", "Hex color code when 'Custom' is selected (format: #RRGGBB or RRGGBB)");
         enableSingleplayerPause = Config.Bind("General", "Singleplayer Pause", false, "Enable singleplayer pause functionality");
         skipIntro = Config.Bind("General", "Skip Intro", false, "Skip the intro sequence on startup");
         skipMissionCountdown = Config.Bind("General", "Skip Mission Countdown", false, "If true, skips the countdown timer before mission start.");
         resizePopups = Config.Bind("General", "Resize Item Popups", false, "If true, reduces the size of item upgrade popups and repositions them.");
+        dataLogWaypoints = Config.Bind("General", "Data Log Waypoints", true, "If true, shows waypoints for undiscovered data logs.");
+        skinRandomizer = Config.Bind("General", "Skin Randomizer", false, "If true, randomly equips favorite skins on mission start.");
 
         aimFOVChange.SettingChanged += OnAimFOVChanged;
         enableAllBounceIndicators.SettingChanged += OnEnableAllBounceIndicatorsChanged;
@@ -95,33 +112,51 @@ public class SparrohPlugin : BaseUnityPlugin
         toggleCrouch.SettingChanged += OnToggleCrouchChanged;
         skipMissionCountdown.SettingChanged += OnSkipMissionCountdownChanged;
         resizePopups.SettingChanged += OnResizePopupsChanged;
+        bounceIndicatorColor.SettingChanged += OnBounceIndicatorColorChanged;
+        bounceIndicatorCustomColor.SettingChanged += OnBounceIndicatorCustomColorChanged;
 
-        enableOrange.SettingChanged += OnColorConfigChanged;
-        enableWhite.SettingChanged += OnColorConfigChanged;
-        enableGreen.SettingChanged += OnColorConfigChanged;
-        enableBlue.SettingChanged += OnColorConfigChanged;
-        enableRed.SettingChanged += OnColorConfigChanged;
-        enableYellow.SettingChanged += OnColorConfigChanged;
-        enablePurple.SettingChanged += OnColorConfigChanged;
-        enableCyan.SettingChanged += OnColorConfigChanged;
+        try
+        {
+            SetupFileWatchers();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError($"Error setting up file watchers: {ex.Message}");
+        }
 
-        SetupFileWatchers();
+        try
+        {
+            SetupAccessTools();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError($"Error setting up access tools: {ex.Message}");
+        }
 
-        SetupAccessTools();
 
-        var harmony = new Harmony(PluginGUID);
 
-        ApplyAimFOVPatches(harmony);
-        ApplySprintFOVPatches(harmony);
-        ApplyToggleAimPatches(harmony);
-        ApplyToggleCrouchPatches(harmony);
+        try
+        {
+            var harmony = new Harmony(PluginGUID);
 
-        ApplyDisableBounceIndicatorPatches(harmony);
-        ApplyRegionBypassPatches(harmony);
-        ApplyAllBounceIndicatorsPatches(harmony);
-        ApplySingleplayerPausePatches();
-        ApplySkipIntroPatches(harmony);
-        ApplyCountdownSkipPatches(harmony);
+            ApplyAimFOVPatches(harmony);
+            ApplySprintFOVPatches(harmony);
+            ApplyToggleAimPatches(harmony);
+            ApplyToggleCrouchPatches(harmony);
+
+            ApplyDisableBounceIndicatorPatches(harmony);
+            ApplyRegionBypassPatches(harmony);
+            ApplyAllBounceIndicatorsPatches(harmony);
+            ApplySingleplayerPausePatches();
+            ApplySkipIntroPatches(harmony);
+            ApplyCountdownSkipPatches(harmony);
+            ApplyDataLogWaypointPatches(harmony);
+            ApplySkinRandomizerPatches(harmony);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError($"Error applying patches: {ex.Message}");
+        }
 
         Logger.LogInfo($"{PluginName} loaded successfully.");
     }
@@ -201,12 +236,22 @@ public class SparrohPlugin : BaseUnityPlugin
 
     private void ApplySkipIntroPatches(Harmony harmony)
     {
-        harmony.PatchAll(typeof(MycopunkSkipIntro.IntroSkip.IntroPatches));
+        harmony.PatchAll(typeof(IntroSkip.IntroPatches));
     }
 
     private void ApplyCountdownSkipPatches(Harmony harmony)
     {
         harmony.PatchAll(typeof(DisableCountdown));
+    }
+
+    private void ApplyDataLogWaypointPatches(Harmony harmony)
+    {
+        DataLogWaypointPatches.Initialize();
+    }
+
+    private void ApplySkinRandomizerPatches(Harmony harmony)
+    {
+        harmony.PatchAll(typeof(DropPodPatches));
     }
 
     private void OnAimFOVChanged(object sender, EventArgs e)
@@ -246,22 +291,48 @@ public class SparrohPlugin : BaseUnityPlugin
     {
     }
 
-    private void OnColorConfigChanged(object sender, EventArgs e)
+    private void OnBounceIndicatorColorChanged(object sender, EventArgs e)
     {
         UpdateBounceIndicatorColors();
     }
 
+    private void OnBounceIndicatorCustomColorChanged(object sender, EventArgs e)
+    {
+        if (bounceIndicatorColor.Value == BounceIndicatorColor.Custom)
+        {
+            UpdateBounceIndicatorColors();
+        }
+    }
+
     private Color GetSelectedColor()
     {
-        if (enableOrange.Value) return new Color(1f, 0.5f, 0f);
-        if (enableWhite.Value) return new Color(1f, 1f, 1f);
-        if (enableGreen.Value) return new Color(0f, 1f, 0f);
-        if (enableBlue.Value) return new Color(0f, 0f, 1f);
-        if (enableRed.Value) return new Color(1f, 0f, 0f);
-        if (enableYellow.Value) return new Color(1f, 1f, 0f);
-        if (enablePurple.Value) return new Color(1f, 0f, 1f);
-        if (enableCyan.Value) return new Color(0f, 1f, 1f);
-        return new Color(1f, 0.5f, 0f);
+        switch (bounceIndicatorColor.Value)
+        {
+            case BounceIndicatorColor.Orange: return new Color(1f, 0.5f, 0f);
+            case BounceIndicatorColor.White: return new Color(1f, 1f, 1f);
+            case BounceIndicatorColor.Green: return new Color(0f, 1f, 0f);
+            case BounceIndicatorColor.Blue: return new Color(0f, 0f, 1f);
+            case BounceIndicatorColor.Red: return new Color(1f, 0f, 0f);
+            case BounceIndicatorColor.Yellow: return new Color(1f, 1f, 0f);
+            case BounceIndicatorColor.Purple: return new Color(1f, 0f, 1f);
+            case BounceIndicatorColor.Cyan: return new Color(0f, 1f, 1f);
+            case BounceIndicatorColor.Custom:
+                string hexCode = bounceIndicatorCustomColor.Value;
+                if (!hexCode.StartsWith("#"))
+                {
+                    hexCode = "#" + hexCode;
+                }
+                Color customColor;
+                if (ColorUtility.TryParseHtmlString(hexCode, out customColor))
+                {
+                    return customColor;
+                }
+                else
+                {
+                    return new Color(1f, 0f, 0f);
+                }
+            default: return new Color(1f, 0f, 0f);
+        }
     }
 
     private void UpdateBounceIndicatorColors()
@@ -313,14 +384,23 @@ public class SparrohPlugin : BaseUnityPlugin
         }
     }
 
+
+
     private void Update()
     {
         if (resizePopups.Value && gameManager == null)
         {
-            gameManager = GameManager.Instance;
-            if (gameManager != null)
+            try
             {
-                ResizePopup.Initialize(gameManager);
+                gameManager = GameManager.Instance;
+                if (gameManager != null)
+                {
+                    ResizePopup.Initialize(gameManager);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Error accessing GameManager or initializing resize popup: {ex.Message}");
             }
         }
     }

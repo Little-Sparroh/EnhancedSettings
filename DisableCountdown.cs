@@ -1,5 +1,5 @@
+using System;
 using HarmonyLib;
-using DropPodFields = DisableCountdown.DropPodFields;
 
 internal static class DisableCountdown
 {
@@ -12,12 +12,19 @@ internal static class DisableCountdown
     [HarmonyPrefix]
     private static void SkipDropPodLaunchCountdown(DropPod __instance)
     {
-        if (SparrohPlugin.skipMissionCountdown.Value)
+        try
         {
-            if (DropPodFields.LaunchCountdownTime != null)
+            if (SparrohPlugin.skipMissionCountdown.Value)
             {
-                DropPodFields.LaunchCountdownTime.SetValue(__instance, 0f);
+                if (DropPodFields.LaunchCountdownTime != null)
+                {
+                    DropPodFields.LaunchCountdownTime.SetValue(__instance, 0f);
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            SparrohPlugin.Logger.LogError($"Error in SkipDropPodLaunchCountdown: {ex.Message}");
         }
     }
 }

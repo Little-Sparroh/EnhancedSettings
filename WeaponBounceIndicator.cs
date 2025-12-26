@@ -5,7 +5,6 @@ using System.Reflection;
 using UnityEngine;
 using Unity.Netcode;
 
-
 internal static class AllBounceIndicators
 {
     internal static Dictionary<Gun, List<LineRenderer>> BounceLines = new Dictionary<Gun, List<LineRenderer>>();
@@ -16,16 +15,33 @@ internal static class AllBounceIndicators
 
     private static Color GetSelectedColor()
     {
-        if (SparrohPlugin.enableOrange.Value) return new Color(1f, 0.5f, 0f);
-        if (SparrohPlugin.enableWhite.Value) return new Color(1f, 1f, 1f);
-        if (SparrohPlugin.enableGreen.Value) return new Color(0f, 1f, 0f);
-        if (SparrohPlugin.enableBlue.Value) return new Color(0f, 0f, 1f);
-        if (SparrohPlugin.enableRed.Value) return new Color(1f, 0f, 0f);
-        if (SparrohPlugin.enableYellow.Value) return new Color(1f, 1f, 0f);
-        if (SparrohPlugin.enablePurple.Value) return new Color(1f, 0f, 1f);
-        if (SparrohPlugin.enableCyan.Value) return new Color(0f, 1f, 1f);
-
-        return new Color(1f, 0f, 0f);
+        switch (SparrohPlugin.bounceIndicatorColor.Value)
+        {
+            case BounceIndicatorColor.Orange: return new Color(1f, 0.5f, 0f);
+            case BounceIndicatorColor.White: return new Color(1f, 1f, 1f);
+            case BounceIndicatorColor.Green: return new Color(0f, 1f, 0f);
+            case BounceIndicatorColor.Blue: return new Color(0f, 0f, 1f);
+            case BounceIndicatorColor.Red: return new Color(1f, 0f, 0f);
+            case BounceIndicatorColor.Yellow: return new Color(1f, 1f, 0f);
+            case BounceIndicatorColor.Purple: return new Color(1f, 0f, 1f);
+            case BounceIndicatorColor.Cyan: return new Color(0f, 1f, 1f);
+            case BounceIndicatorColor.Custom:
+                string hexCode = SparrohPlugin.bounceIndicatorCustomColor.Value;
+                if (!hexCode.StartsWith("#"))
+                {
+                    hexCode = "#" + hexCode;
+                }
+                Color customColor;
+                if (ColorUtility.TryParseHtmlString(hexCode, out customColor))
+                {
+                    return customColor;
+                }
+                else
+                {
+                    return new Color(1f, 0f, 0f);
+                }
+            default: return new Color(1f, 0f, 0f);
+        }
     }
 
     public static LineRenderer CreateBounceLinePrefab()
