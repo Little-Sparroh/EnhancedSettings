@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.0 (2026-01-02)
+
+* Added Show Default Additional Details: Forces hover info to always display additional details by default
+
 ## 1.3.0 (2025-12-24)
 
 * Added Data Log Waypoints: Shows waypoint pings on the minimap for undiscovered data logs

@@ -38,7 +38,7 @@ public class SparrohPlugin : BaseUnityPlugin
 {
     public const string PluginGUID = "sparroh.enhancedsettings";
     public const string PluginName = "EnhancedSettings";
-    public const string PluginVersion = "1.3.0";
+    public const string PluginVersion = "1.4.0";
 
     internal static new ManualLogSource Logger;
 
@@ -51,12 +51,12 @@ public class SparrohPlugin : BaseUnityPlugin
     internal static ConfigEntry<bool> enableAllBounceIndicators;
     internal static ConfigEntry<BounceIndicatorColor> bounceIndicatorColor;
     internal static ConfigEntry<string> bounceIndicatorCustomColor;
-    internal static ConfigEntry<bool> enableSingleplayerPause;
     internal static ConfigEntry<bool> skipIntro;
     internal static ConfigEntry<bool> skipMissionCountdown;
     internal static ConfigEntry<bool> resizePopups;
     internal static ConfigEntry<bool> dataLogWaypoints;
     internal static ConfigEntry<bool> skinRandomizer;
+    internal static ConfigEntry<bool> showDefaultAdditionalDetails;
 
     private FileSystemWatcher disableAimFOVWatcher;
     private FileSystemWatcher disableSprintFOVWatcher;
@@ -97,16 +97,15 @@ public class SparrohPlugin : BaseUnityPlugin
         enableAllBounceIndicators = Config.Bind("Bounce Indicators", "All Bounce Indicators", false, "Show bounce/ricochet prediction lines for all weapons with bounces >= 1.");
         bounceIndicatorColor = Config.Bind("Bounce Indicators", "Bounce Indicator Color", BounceIndicatorColor.Orange, "Select the color for bounce/ricochet prediction lines");
         bounceIndicatorCustomColor = Config.Bind("Bounce Indicators", "Bounce Indicator Custom Color", "#FF8000", "Hex color code when 'Custom' is selected (format: #RRGGBB or RRGGBB)");
-        enableSingleplayerPause = Config.Bind("General", "Singleplayer Pause", false, "Enable singleplayer pause functionality");
         skipIntro = Config.Bind("General", "Skip Intro", false, "Skip the intro sequence on startup");
         skipMissionCountdown = Config.Bind("General", "Skip Mission Countdown", false, "If true, skips the countdown timer before mission start.");
         resizePopups = Config.Bind("General", "Resize Item Popups", false, "If true, reduces the size of item upgrade popups and repositions them.");
         dataLogWaypoints = Config.Bind("General", "Data Log Waypoints", true, "If true, shows waypoints for undiscovered data logs.");
         skinRandomizer = Config.Bind("General", "Skin Randomizer", false, "If true, randomly equips favorite skins on mission start.");
+        showDefaultAdditionalDetails = Config.Bind("General", "Show Default Additional Details", false, "If true, shows additional details by default in hover info.");
 
         aimFOVChange.SettingChanged += OnAimFOVChanged;
         enableAllBounceIndicators.SettingChanged += OnEnableAllBounceIndicatorsChanged;
-        enableSingleplayerPause.SettingChanged += OnEnableSingleplayerPauseChanged;
         sprintFOVChange.SettingChanged += OnSprintFOVChanged;
         toggleAim.SettingChanged += OnToggleAimChanged;
         toggleCrouch.SettingChanged += OnToggleCrouchChanged;
@@ -147,11 +146,11 @@ public class SparrohPlugin : BaseUnityPlugin
             ApplyDisableBounceIndicatorPatches(harmony);
             ApplyRegionBypassPatches(harmony);
             ApplyAllBounceIndicatorsPatches(harmony);
-            ApplySingleplayerPausePatches();
             ApplySkipIntroPatches(harmony);
             ApplyCountdownSkipPatches(harmony);
             ApplyDataLogWaypointPatches(harmony);
             ApplySkinRandomizerPatches(harmony);
+            ApplyDefaultAdditionalDetailsPatches(harmony);
         }
         catch (Exception ex)
         {
@@ -229,11 +228,6 @@ public class SparrohPlugin : BaseUnityPlugin
         harmony.PatchAll(typeof(GunBouncePatches));
     }
 
-    private void ApplySingleplayerPausePatches()
-    {
-        gameObject.AddComponent<SingleplayerPause>();
-    }
-
     private void ApplySkipIntroPatches(Harmony harmony)
     {
         harmony.PatchAll(typeof(IntroSkip.IntroPatches));
@@ -252,6 +246,11 @@ public class SparrohPlugin : BaseUnityPlugin
     private void ApplySkinRandomizerPatches(Harmony harmony)
     {
         harmony.PatchAll(typeof(DropPodPatches));
+    }
+
+    private void ApplyDefaultAdditionalDetailsPatches(Harmony harmony)
+    {
+        harmony.PatchAll(typeof(DefaultAdditionalDetailsPatches));
     }
 
     private void OnAimFOVChanged(object sender, EventArgs e)
@@ -276,10 +275,6 @@ public class SparrohPlugin : BaseUnityPlugin
     }
 
     private void OnEnableAllBounceIndicatorsChanged(object sender, EventArgs e)
-    {
-    }
-
-    private void OnEnableSingleplayerPauseChanged(object sender, EventArgs e)
     {
     }
 

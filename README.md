@@ -17,6 +17,7 @@ This mod provides various client-side enhancements for MycoPunk gameplay, all co
 - **Resize Item Popups**: Reduce size of item upgrade popups
 - **Data Log Waypoints**: Show waypoints for undiscovered data logs on minimap
 - **Skin Randomizer**: Randomly equip favorite skins at mission start
+- **Show Default Additional Details**: Forces hover info to always display additional details by default
 - **Multiplayer Region Bypass**: Bypass regional restrictions in lobby distance
 
 ## Installation
